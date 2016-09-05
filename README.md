@@ -28,7 +28,7 @@ Quick view
 -----------
 
 ```go
-import "github.com/kataras/go-sessions"
+import "github.com/fasthttp-contrib/sessions"
 
 sess := sessions.StartFasthttp(*fasthttp.RequestCtx)
 sess.ID() string
