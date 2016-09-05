@@ -30,7 +30,7 @@ Quick view
 ```go
 import "github.com/kataras/go-sessions"
 
-sess := sessions.Start(http.ResponseWriter, *http.Request)
+sess := sessions.StartFasthttp(*fasthttp.RequestCtx)
 sess.ID() string
 sess.Get(string) interface{}
 sess.GetString(key string) string
@@ -48,7 +48,7 @@ Installation
 The only requirement is the [Go Programming Language](https://golang.org/dl), at least v1.7.
 
 ```bash
-$ go get -u github.com/kataras/go-sessions
+$ go get -u github.com/fasthttp-contrib/sessions
 ```
 
 Features
@@ -69,15 +69,17 @@ Take a look at the [./examples](https://github.com/kataras/go-sessions/tree/mast
 **OUTLINE**
 
 ```go
+
+// StartFasthttp starts the session for the particular valyala/fasthttp request
+StartFasthttp(*fasthttp.RequestCtx) Session
+// DestroyFasthttp kills the valyala/fasthttp session and remove the associated cookie
+DestroyFasthttp(*fasthttp.RequestCtx)
+
 // Start starts the session for the particular net/http request
 Start(http.ResponseWriter, *http.Request) Session
 // Destroy kills the net/http session and remove the associated cookie
 Destroy(http.ResponseWriter, *http.Request)
 
-// Start starts the session for the particular valyala/fasthttp request
-StartFasthttp(*fasthttp.RequestCtx) Session
-// Destroy kills the valyala/fasthttp session and remove the associated cookie
-DestroyFasthttp(*fasthttp.RequestCtx)
 
 // UseDatabase ,optionally, adds a session database to the manager's provider,
 // a session db doesn't have write access
@@ -87,95 +89,6 @@ UseDatabase(Database)
 // UpdateConfig updates the configuration field (Config does not receives a pointer, so this is a way to update a pre-defined configuration)
 UpdateConfig(Config)
 ```
-
-Usage NET/HTTP
-------------
-
-
-`Start` returns a `Session`, **Session outline**
-
-```go
-type Session interface {
-  ID() string
-  Get(string) interface{}
-  GetString(key string) string
-  GetInt(key string) int
-  GetAll() map[string]interface{}
-  VisitAll(cb func(k string, v interface{}))
-  Set(string, interface{})
-  Delete(string)
-  Clear()
-}
-```
-
-```go
-package main
-
-import (
-	"fmt"
-	"github.com/kataras/go-sessions"
-	"net/http"
-)
-
-func main() {
-
-	// set some values to the session
-	setHandler := http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		values := map[string]interface{}{
-			"Name":   "go-sessions",
-			"Days":   "1",
-			"Secret": "dsads£2132215£%%Ssdsa",
-		}
-
-		sess := sessions.Start(res, req) // init the session
-    // sessions.Start returns:
-		// type Session interface {
-		//  ID() string
-		//	Get(string) interface{}
-		//	GetString(key string) string
-		//	GetInt(key string) int
-		//	GetAll() map[string]interface{}
-		//	VisitAll(cb func(k string, v interface{}))
-		//	Set(string, interface{})
-		//	Delete(string)
-		//	Clear()
-		//}
-
-		for k, v := range values {
-			sess.Set(k, v) // fill session, set each of the key-value pair
-		}
-		res.Write([]byte("Session saved, go to /get to view the results"))
-	})
-	http.Handle("/set/", setHandler)
-
-	// get the values from the session
-	getHandler := http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		sess := sessions.Start(res, req) // init the session
-		sessValues := sess.GetAll()      // get all values from this session
-
-		res.Write([]byte(fmt.Sprintf("%#v", sessValues)))
-	})
-	http.Handle("/get/", getHandler)
-
-	// clear all values from the session
-	clearHandler := http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		sess := sessions.Start(res, req)
-		sess.Clear()
-	})
-	http.Handle("/clear/", clearHandler)
-
-	// destroys the session, clears the values and removes the server-side entry and client-side sessionid cookie
-	destroyHandler := http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		sessions.Destroy(res, req)
-	})
-	http.Handle("/destroy/", destroyHandler)
-
-	fmt.Println("Open a browser tab and navigate to the localhost:8080/set/")
-	http.ListenAndServe(":8080", nil)
-}
-
-```
-
 
 
 Usage FASTHTTP
@@ -275,6 +188,97 @@ func main() {
 
 
 ```
+
+Usage NET/HTTP
+------------
+
+
+`Start` returns a `Session`, **Session outline**
+
+```go
+type Session interface {
+  ID() string
+  Get(string) interface{}
+  GetString(key string) string
+  GetInt(key string) int
+  GetAll() map[string]interface{}
+  VisitAll(cb func(k string, v interface{}))
+  Set(string, interface{})
+  Delete(string)
+  Clear()
+}
+```
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/kataras/go-sessions"
+	"net/http"
+)
+
+func main() {
+
+	// set some values to the session
+	setHandler := http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		values := map[string]interface{}{
+			"Name":   "go-sessions",
+			"Days":   "1",
+			"Secret": "dsads£2132215£%%Ssdsa",
+		}
+
+		sess := sessions.Start(res, req) // init the session
+    // sessions.Start returns:
+		// type Session interface {
+		//  ID() string
+		//	Get(string) interface{}
+		//	GetString(key string) string
+		//	GetInt(key string) int
+		//	GetAll() map[string]interface{}
+		//	VisitAll(cb func(k string, v interface{}))
+		//	Set(string, interface{})
+		//	Delete(string)
+		//	Clear()
+		//}
+
+		for k, v := range values {
+			sess.Set(k, v) // fill session, set each of the key-value pair
+		}
+		res.Write([]byte("Session saved, go to /get to view the results"))
+	})
+	http.Handle("/set/", setHandler)
+
+	// get the values from the session
+	getHandler := http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		sess := sessions.Start(res, req) // init the session
+		sessValues := sess.GetAll()      // get all values from this session
+
+		res.Write([]byte(fmt.Sprintf("%#v", sessValues)))
+	})
+	http.Handle("/get/", getHandler)
+
+	// clear all values from the session
+	clearHandler := http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		sess := sessions.Start(res, req)
+		sess.Clear()
+	})
+	http.Handle("/clear/", clearHandler)
+
+	// destroys the session, clears the values and removes the server-side entry and client-side sessionid cookie
+	destroyHandler := http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		sessions.Destroy(res, req)
+	})
+	http.Handle("/destroy/", destroyHandler)
+
+	fmt.Println("Open a browser tab and navigate to the localhost:8080/set/")
+	http.ListenAndServe(":8080", nil)
+}
+
+```
+
+
+
 
 FAQ
 ------------
