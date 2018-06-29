@@ -27,10 +27,12 @@ package sessions
 
 import (
 	"encoding/base64"
-	"github.com/valyala/fasthttp"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/valyala/fasthttp"
 )
 
 const (
@@ -66,6 +68,7 @@ type (
 
 // New creates & returns a new Sessions(manager) and start its GC
 func New(c Config) Sessions {
+	rand.Seed(time.Now().UnixNano())
 	c = c.Validate()
 	// init and start the sess manager
 	sess := &sessions{config: c, provider: NewProvider(c.Expires)}
