@@ -73,8 +73,8 @@ func (p *Provider) updateDatabases(sid string, newValues map[string]interface{})
 // Init creates the session  and returns it
 func (p *Provider) Init(sid string) Session {
 	newSession := p.NewSession(sid)
-	elem := p.list.PushBack(newSession)
 	p.mu.Lock()
+	elem := p.list.PushBack(newSession)
 	p.sessions[sid] = elem
 	p.mu.Unlock()
 	return newSession
